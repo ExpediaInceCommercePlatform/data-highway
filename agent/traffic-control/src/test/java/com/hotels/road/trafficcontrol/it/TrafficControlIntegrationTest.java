@@ -17,6 +17,7 @@ package com.hotels.road.trafficcontrol.it;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.boot.Banner.Mode.OFF;
@@ -44,11 +45,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import kafka.admin.AdminUtils;
-import kafka.server.ConfigType;
-import kafka.utils.ZkUtils;
-import lombok.extern.slf4j.Slf4j;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -69,6 +65,11 @@ import com.hotels.road.trafficcontrol.TrafficControl;
 import com.hotels.road.trafficcontrol.TrafficControlApp;
 import com.hotels.road.trafficcontrol.model.KafkaRoad;
 import com.hotels.road.trafficcontrol.model.TrafficControlStatus;
+
+import kafka.admin.AdminUtils;
+import kafka.server.ConfigType;
+import kafka.utils.ZkUtils;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RunWith(MockitoJUnitRunner.class)
@@ -250,6 +251,20 @@ public class TrafficControlIntegrationTest {
     zkUtils.close();
 
     assertThat(config.getProperty(TopicConfig.CLEANUP_POLICY_CONFIG), is(TopicConfig.CLEANUP_POLICY_COMPACT));
+  }
+
+  @Test
+  public void deleteTopic() throws Exception {
+    String topicName = "test_topic4";
+    kafka.createTopic(topicName, 4, 1);
+    JsonNode model = mapper
+        .readTree(
+            "{\"topicName\":\"test_topic4\",\"status\":{\"topicCreated\":true,\"partitions\":4,\"replicationFactor\":1}}");
+    KafkaModelReader modelReader = context.getBean(KafkaModelReader.class);
+    TrafficControl agent = context.getBean(TrafficControl.class);
+    agent.deletedModel(topicName, modelReader.read(model));
+    Thread.sleep(1000);
+    assertFalse(context.getBean(KafkaAdminClient.class).topicExists(topicName));
   }
 
   private KafkaConsumer<String, String> createPatchTopicConsumer() {

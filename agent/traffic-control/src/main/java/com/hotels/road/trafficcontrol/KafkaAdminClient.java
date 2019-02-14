@@ -22,6 +22,9 @@ import java.util.Properties;
 
 import org.apache.kafka.common.config.TopicConfig;
 
+import com.hotels.road.rest.model.RoadType;
+import com.hotels.road.trafficcontrol.model.KafkaRoad;
+
 import kafka.admin.AdminUtils;
 import kafka.admin.RackAwareMode;
 import kafka.common.KafkaException;
@@ -30,9 +33,6 @@ import kafka.server.ConfigType;
 import kafka.utils.ZkUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import com.hotels.road.rest.model.RoadType;
-import com.hotels.road.trafficcontrol.model.KafkaRoad;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -116,6 +116,15 @@ public class KafkaAdminClient {
     }
     log.debug("numPartitions: {}, numReplicas: {}", numPartitions, numReplicas);
     return new KafkaTopicDetails(type, numPartitions, numReplicas);
+  }
+
+  public void deleteTopic(KafkaRoad oldModel) {
+    String topicName = oldModel.getTopicName();
+    if (topicName == null || !topicExists(topicName)) {
+      log.warn("oldModel is in a bad state or topic is already deleted");
+      return;
+    }
+    AdminUtils.deleteTopic(zkUtils, topicName);
   }
 
   public int getPartitions() {
